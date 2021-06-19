@@ -1,3 +1,9 @@
+/*
+Create an API that parse two int, type, then return area of it. type: square, rectangle, triangle, parallelogram (use a method and a function)
+
+Also available at: https://github.com/nonkronk/it-goalta/blob/master/materi-5/areaCalculator/main.go
+*/
+
 package main
 
 import (
