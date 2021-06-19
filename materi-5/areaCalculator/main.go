@@ -20,8 +20,8 @@ type shape struct {
 
 // Run the web server
 func main() {
-	http.HandleFunc("/", areas)
-	fmt.Println("Starting RESTFul API endpoint at http://localhost:8080/") // try curl http://localhost:8080/?base=10&height=10&type=rectangle
+	http.HandleFunc("/areas", areas)
+	fmt.Println("Starting RESTFul API endpoint at http://localhost:8080/areas") // try curl http://localhost:8080/areas?base=10&height=10&type=rectangle
 	http.ListenAndServe(":8080", nil)
 }
 
