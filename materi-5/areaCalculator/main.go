@@ -30,19 +30,19 @@ func areas(w http.ResponseWriter, r *http.Request) {
 	// Check "base" parameter
 	base, err := strconv.ParseFloat(r.FormValue("base"), 64)
 	if err != nil {
-		http.Error(w, `Invalid "base" parameter`, http.StatusInternalServerError)
+		http.Error(w, `Invalid "base" parameter`, http.StatusBadRequest)
 		return
 	}
 	// Check "height" parameter
 	height, err := strconv.ParseFloat(r.FormValue("height"), 64)
 	if err != nil {
-		http.Error(w, `Invalid "height" parameter`, http.StatusInternalServerError)
+		http.Error(w, `Invalid "height" parameter`, http.StatusBadRequest)
 		return
 	}
 	// Check "type" parameter
 	type_ := r.FormValue("type")
 	if !(type_ == "square" || type_ == "rectangle" || type_ == "triangle" || type_ == "parallelogram") {
-		http.Error(w, `Invalid "type" parameter`, http.StatusInternalServerError)
+		http.Error(w, `Invalid "type" parameter`, http.StatusBadRequest)
 		return
 	}
 	// An idiomatic way to encapsulate new struct creation
