@@ -6,7 +6,6 @@ API Spesification
 
 Also available at: https://github.com/nonkronk/it-goalta/tree/master/materi-7
 */
-
 package main
 
 import (
