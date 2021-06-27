@@ -38,24 +38,22 @@ func (g *Garages) GetAGarage(db *gorm.DB, garage_id int) (*Garages, error) {
 
 // Update garage data in database
 func (g *Garages) UpdateGarage(db *gorm.DB, garage_id int, request_body map[string]interface{}) (*Garages, error) {
-	err := db.Debug().Model(&Garages{}).Where("id = ?", garage_id).Updates(request_body).Error
-	if err != nil {
+	if err := db.Debug().Model(&Garages{}).Where("id = ?", garage_id).Updates(request_body).Error; err != nil {
 		return &Garages{}, err
 	}
 	// Get the selected garage object to prevent null or missing data
 	// so that the method return complete garage data
-	err = db.Debug().First(&g, garage_id).Error
+	err := db.Debug().First(&g, garage_id).Error
 	return g, err
 }
 
 // Delete garage data from database
 func (g *Garages) DeleteGarage(db *gorm.DB, garage_id int) (*Garages, error) {
 	deleted_garage := Garages{}
-	err := db.Debug().First(&deleted_garage, garage_id).Error
-	if err != nil {
+	if err := db.Debug().First(&deleted_garage, garage_id).Error; err != nil {
 		return &Garages{}, err
 	}
-	err = db.Debug().Delete(&g, garage_id).Error
+	err := db.Debug().Delete(&g, garage_id).Error
 	return &deleted_garage, err
 }
 

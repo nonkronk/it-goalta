@@ -68,29 +68,25 @@ type Prefix struct {
 
 // Store the request data to database
 func (o *Orders) SaveOrder(db *gorm.DB) (*Orders, error) {
-	err := o.PopulateOrderCustomer(db, o.Customer_id)
-	if err != nil {
+	if err := o.PopulateOrderCustomer(db, o.Customer_id); err != nil {
 		return &Orders{}, err
 	}
-	err = o.PopulateOrderCar(db, o.Car_id)
-	if err != nil {
+	if err := o.PopulateOrderCar(db, o.Car_id); err != nil {
 		return &Orders{}, err
 	}
-	err = db.Debug().Create(&o).Error
+	err := db.Debug().Create(&o).Error
 	return o, err
 }
 
 // Get order data by id
 func (o *Orders) GetOrder(db *gorm.DB, order_id int) (*Orders, error) {
-	err := db.Debug().First(&o, order_id).Error
-	if err != nil {
+	if err := db.Debug().First(&o, order_id).Error; err != nil {
 		return &Orders{}, err
 	}
-	err = o.PopulateOrderCustomer(db, o.Customer_id)
-	if err != nil {
+	if err := o.PopulateOrderCustomer(db, o.Customer_id); err != nil {
 		return &Orders{}, err
 	}
-	err = o.PopulateOrderCar(db, o.Car_id)
+	err := o.PopulateOrderCar(db, o.Car_id)
 	return o, err
 }
 
@@ -127,15 +123,13 @@ func (o *Orders) GetComposedAllOrders(db *gorm.DB, c echo.Context) (*Meta, *[]Co
 		chain = chain.Where("customers.id_card = " + id_card)
 	}
 	result := chain.Scan(&composed_orders)
-	err := result.Error
-	if err != nil {
+	if err := result.Error; err != nil {
 		return &Meta{}, &[]ComposedOrders{}, err
 	}
 	// Get the metadata
 	meta.GetResult(c, result.RowsAffected)
 	// Paginate the result
-	err = chain.Scopes(Paginate(c)).Scan(&composed_orders).Error
-	if err != nil {
+	if err := chain.Scopes(Paginate(c)).Scan(&composed_orders).Error; err != nil {
 		return &Meta{}, &[]ComposedOrders{}, err
 	}
 	// Manipulate and add prefix to each order ID
@@ -144,32 +138,28 @@ func (o *Orders) GetComposedAllOrders(db *gorm.DB, c echo.Context) (*Meta, *[]Co
 		prefix_id := fmt.Sprintf("%s"+str_id, "order-") // add prefix
 		composed_orders[i].Order_id = prefix_id
 	}
-	return &meta, &composed_orders, err
+	return &meta, &composed_orders, nil
 }
 
 // Get all the orders data and optionally filtered by query params
 func (o *Orders) GetAllOrders(db *gorm.DB, c echo.Context) (*[]Orders, error) {
 	orders := []Orders{}
 	// With pagination implemented
-	err := db.Debug().Scopes(Paginate(c)).Find(&orders).Error
-	if err != nil {
+	if err := db.Debug().Scopes(Paginate(c)).Find(&orders).Error; err != nil {
 		return &[]Orders{}, err
 	}
 	for i := range orders {
-		err = db.Debug().Model(&Customers{}).Where("id = ?", orders[i].Customer_id).Take(&orders[i].Customers).Error
-		if err != nil {
+		if err := db.Debug().Model(&Customers{}).Where("id = ?", orders[i].Customer_id).Take(&orders[i].Customers).Error; err != nil {
 			return &[]Orders{}, err
 		}
-		err = db.Debug().Model(&Cars{}).Where("id = ?", orders[i].Car_id).Take(&orders[i].Cars).Error
-		if err != nil {
+		if err := db.Debug().Model(&Cars{}).Where("id = ?", orders[i].Car_id).Take(&orders[i].Cars).Error; err != nil {
 			return &[]Orders{}, err
 		}
 	}
-	err = db.Debug().Scopes(Paginate(c)).Find(&orders).Error
-	if err != nil {
+	if err := db.Debug().Scopes(Paginate(c)).Find(&orders).Error; err != nil {
 		return &[]Orders{}, err
 	}
-	return &orders, err
+	return &orders, nil
 }
 
 // Populate customer data; the foreignkey of an order
@@ -186,8 +176,7 @@ func (o *Orders) PopulateOrderCar(db *gorm.DB, car_id int) error {
 
 // Calculate estimated price of an order
 func (o *Orders) CalculateEstPrice(db *gorm.DB) (int, error) {
-	err := o.PopulateOrderCar(db, o.Car_id)
-	if err != nil {
+	if err := o.PopulateOrderCar(db, o.Car_id); err != nil {
 		return 0, err
 	}
 	driver_price := 150000 // Hard coded driver price
@@ -197,7 +186,7 @@ func (o *Orders) CalculateEstPrice(db *gorm.DB) (int, error) {
 	p := float64(o.Cars.Price_per_day)
 	e := float64(o.Estimated_days)
 	d := float64(driver_price)
-	return int((p * e) + (d * e)), err
+	return int((p * e) + (d * e)), nil
 }
 
 // Count the number of order objects available in database
@@ -248,15 +237,14 @@ func (o *Orders) UpdateLateStatus(db *gorm.DB, order_id int) error {
 // Determine total_days of an order occured
 func (o *Orders) UpdateTotalDays(db *gorm.DB, order_id int) error {
 	var created_at time.Time
-	err := db.Debug().Model(&Orders{}).Select("Created_at").Where("id = ?", order_id).Scan(&created_at).Error
-	if err != nil {
+	if err := db.Debug().Model(&Orders{}).Select("Created_at").Where("id = ?", order_id).Scan(&created_at).Error; err != nil {
 		return err
 	}
 	total_days := time.Now().Day() - created_at.Day()
 	if total_days < 1 {
 		total_days = 1
 	}
-	err = db.Debug().Model(&Orders{}).Where("id = ?", order_id).Update("total_days", total_days).Error
+	err := db.Debug().Model(&Orders{}).Where("id = ?", order_id).Update("total_days", total_days).Error
 	return err
 }
 

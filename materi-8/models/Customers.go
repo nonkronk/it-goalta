@@ -49,13 +49,12 @@ func (c *Customers) GetCustomer(db *gorm.DB, customer_id int) (*Customers, error
 
 // Update customer data in database
 func (c *Customers) UpdateCustomer(db *gorm.DB, customer_id int, request_body map[string]interface{}) (*Customers, error) {
-	err := db.Debug().Model(&Customers{}).Where("id = ?", customer_id).Updates(request_body).Error
-	if err != nil {
+	if err := db.Debug().Model(&Customers{}).Where("id = ?", customer_id).Updates(request_body).Error; err != nil {
 		return &Customers{}, err
 	}
 	// Get the selected customer object to prevent null or missing data
 	// so that the method return cosmplete customer data
-	err = db.Debug().First(&c, customer_id).Error
+	err := db.Debug().First(&c, customer_id).Error
 	return c, err
 }
 
@@ -69,10 +68,9 @@ func (c *Customers) CountAllCustomers(db *gorm.DB) (int64, error) {
 // Delete customer data from database
 func (c *Customers) DeleteCustomer(db *gorm.DB, customer_id int) (*Customers, error) {
 	deleted_customer := Customers{}
-	err := db.Debug().First(&deleted_customer, customer_id).Error
-	if err != nil {
+	if err := db.Debug().First(&deleted_customer, customer_id).Error; err != nil {
 		return &Customers{}, err
 	}
-	err = db.Debug().Delete(&c, customer_id).Error
+	err := db.Debug().Delete(&c, customer_id).Error
 	return &deleted_customer, err
 }

@@ -35,11 +35,10 @@ type Cars struct {
 
 // Store the request data to database
 func (c *Cars) SaveCar(db *gorm.DB) (*Cars, error) {
-	err := db.Debug().Create(&c).Error
-	if err != nil {
+	if err := db.Debug().Create(&c).Error; err != nil {
 		return &Cars{}, err
 	}
-	err = c.PopulateCarGarage(db, c.Garage_id)
+	err := c.PopulateCarGarage(db, c.Garage_id)
 	return c, err
 }
 
@@ -53,62 +52,51 @@ func (c *Cars) PopulateCarGarage(db *gorm.DB, garage_id int) error {
 func (c *Cars) GetAllCars(db *gorm.DB, ec echo.Context) (*[]Cars, error) {
 	cars := []Cars{}
 	// With pagination implemented
-	err := db.Debug().Scopes(Paginate(ec)).Find(&cars).Error
-	if err != nil {
+	if err := db.Debug().Scopes(Paginate(ec)).Find(&cars).Error; err != nil {
 		return &[]Cars{}, err
 	}
 	for i := range cars {
-		err = db.Debug().Model(&Garages{}).Where("id = ?", cars[i].Garage_id).Take(&cars[i].Garages).Error
-		if err != nil {
+		if err := db.Debug().Model(&Garages{}).Where("id = ?", cars[i].Garage_id).Take(&cars[i].Garages).Error; err != nil {
 			return &[]Cars{}, err
 		}
 	}
-	return &cars, err
+	return &cars, nil
 }
 
 // Retreive car object with the primary key (id)
 func (c *Cars) GetCar(db *gorm.DB, car_id int) (*Cars, error) {
-	err := db.Debug().First(&c, car_id).Error
-	if err != nil {
+	if err := db.Debug().First(&c, car_id).Error; err != nil {
 		return &Cars{}, err
 	}
-	err = db.Debug().Model(&Garages{}).Where("id = ?", c.Garage_id).Take(&c.Garages).Error
+	err := db.Debug().Model(&Garages{}).Where("id = ?", c.Garage_id).Take(&c.Garages).Error
 	return c, err
 }
 
 // Update car data in database
 func (c *Cars) UpdateCar(db *gorm.DB, car_id int, request_body map[string]interface{}) (*Cars, error) {
-
-	err := db.Debug().Model(&Cars{}).Where("id = ?", car_id).Updates(request_body).Error
-	if err != nil {
+	if err := db.Debug().Model(&Cars{}).Where("id = ?", car_id).Updates(request_body).Error; err != nil {
 		return &Cars{}, err
 	}
 	// Get the selected car object to prevent null or missing data
 	// so that the method return complete car data
-	err = db.Debug().First(&c, car_id).Error
-	if err != nil {
+	if err := db.Debug().First(&c, car_id).Error; err != nil {
 		return &Cars{}, err
 	}
-	err = c.PopulateCarGarage(db, c.Garage_id)
+	err := c.PopulateCarGarage(db, c.Garage_id)
 	return c, err
 }
 
 // Delete car data from database
 func (c *Cars) DeleteCar(db *gorm.DB, car_id int) (*Cars, error) {
 	var deleted_car Cars
-	err := db.Debug().First(&deleted_car, car_id).Error
-	if err != nil {
+	if err := db.Debug().First(&deleted_car, car_id).Error; err != nil {
 		return &Cars{}, err
 	}
-	err = db.Debug().Model(&Garages{}).Where("id = ?", deleted_car.Garage_id).Take(&deleted_car.Garages).Error
-	if err != nil {
+	if err := db.Debug().Model(&Garages{}).Where("id = ?", deleted_car.Garage_id).Take(&deleted_car.Garages).Error; err != nil {
 		return &Cars{}, err
 	}
 	db.Debug().Model(&Orders{}).Association("Cars").Delete(Cars{})
-	if err != nil {
-		return &Cars{}, err
-	}
-	err = db.Debug().Delete(&c, car_id).Error
+	err := db.Debug().Delete(&c, car_id).Error
 	return &deleted_car, err
 }
 
@@ -118,14 +106,13 @@ func (c *Cars) FixInconsistentKey(ec echo.Context) (map[string]interface{}, erro
 	// and populate json data.
 	// It will only update non-zero value fields
 	request_body := make(map[string]interface{})
-	err := json.NewDecoder(ec.Request().Body).Decode(&request_body)
-	if err != nil {
+	if err := json.NewDecoder(ec.Request().Body).Decode(&request_body); err != nil {
 		return make(map[string]interface{}), err
 	}
 	label := request_body["car"]
 	delete(request_body, "car")
 	request_body["label"] = label
-	return request_body, err
+	return request_body, nil
 }
 
 // Count the number of car objects available in database
