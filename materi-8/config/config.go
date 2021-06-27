@@ -37,7 +37,7 @@ func InitDB() {
 
 func initMigrate() {
 	// Automigrate schema from the struct models
-	DB.AutoMigrate(&models.Cars{}, &models.Customers{}, &models.Garages{}, &models.Orders{})
+	DB.AutoMigrate(&models.Users{}, &models.Cars{}, &models.Customers{}, &models.Garages{}, &models.Orders{})
 }
 
 func connectDB(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
