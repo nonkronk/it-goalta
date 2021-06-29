@@ -28,44 +28,6 @@ type Orders struct {
 	Cars      *Cars      `json:",omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;foreignKey:Car_id"`
 }
 
-// Data transfer object to preserve order of JSON key value when GET /order requested
-type ComposedOrders struct {
-	Id              int    `json:"-"`
-	Order_id        string `json:"order_id,omitempty"`
-	Full_name       string `json:"fullname,omitempty"`
-	Id_card         string `json:"id_card,omitempty"`
-	Mobile          string `json:"mobile,omitempty"`
-	Label           string `json:"car,omitempty"`
-	Car_type        string `json:"car_type,omitempty"`
-	Total_days      int    `json:"days,omitempty"`
-	Estimated_days  int    `json:"estimated_days,omitempty"`
-	With_driver     bool   `json:"with_driver,omitempty"`
-	Status          string `json:"is_late,omitempty"`
-	Estimated_price int    `json:"estimated_price,omitempty"`
-	Total_price     int    `json:"total_price,omitempty"`
-}
-
-type OrdersResponse struct {
-	Meta Meta             `json:"meta"`
-	Data []ComposedOrders `json:"data"`
-}
-
-type Meta struct {
-	Total_data int64 `json:"total_data"`
-	Per_page   int   `json:"per_page"`
-	Page       int   `json:"page"`
-}
-
-type Response struct {
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   interface{} `json:"error,omitempty"`
-}
-
-type Prefix struct {
-	Order_id string `json:"order_id" form:"order_id" gorm:"not null"`
-}
-
 // Store the request data to database
 func (o *Orders) SaveOrder(db *gorm.DB) (*Orders, error) {
 	if err := o.PopulateOrderCustomer(db, o.Customer_id); err != nil {
@@ -191,20 +153,13 @@ func (o *Orders) CalculateEstPrice(db *gorm.DB) (int, error) {
 
 // Count the number of order objects available in database
 func (o *Orders) CountAllOrders(db *gorm.DB) (int64, error) {
-	result := db.Debug().First(&o)
-	err := result.Error
-	return result.RowsAffected, err
+	var count int64
+	err := db.Debug().Model(&Orders{}).Count(&count).Error
+	return count, err
 }
 
 // Add prefix to the order id
 func (o *Orders) AddPrefixOrderId(order_id int) string {
-	str_id := strconv.Itoa(order_id)
-	prefix_id := fmt.Sprintf("%s"+str_id, "order-") // add prefix
-	return prefix_id
-}
-
-// Add prefix to the order id
-func (o *ComposedOrders) AddPrefixOrderId(order_id int) string {
 	str_id := strconv.Itoa(order_id)
 	prefix_id := fmt.Sprintf("%s"+str_id, "order-") // add prefix
 	return prefix_id
@@ -259,40 +214,4 @@ func (o *Orders) TotalPrice() int {
 	t := float64(o.Total_days)
 	d := float64(driver_price)
 	return int((p * t) + (d * t))
-}
-
-// Calculate Metadata of the orders
-func (m *Meta) GetResult(c echo.Context, result int64) {
-	m.Total_data = result
-	actualpage := (m.Total_data / 10) + 1
-	// Add default page & per_page size (10)
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil || page == 0 || int64(page) > actualpage {
-		page = 1
-	}
-	page_size, _ := strconv.Atoi(c.QueryParam("per_page"))
-	if err != nil || page_size == 0 {
-		page_size = 10 // Default page_size params
-	}
-	m.Page = page
-	m.Per_page = page_size
-}
-
-// Implement pagination
-func Paginate(c echo.Context) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		page, _ := strconv.Atoi(c.QueryParam("page"))
-		if page == 0 {
-			page = 1
-		}
-		per_page, _ := strconv.Atoi(c.QueryParam("per_page"))
-		switch {
-		case per_page > 100:
-			per_page = 100
-		case per_page <= 0:
-			per_page = 10
-		}
-		offset := (page - 1) * per_page
-		return db.Offset(offset).Limit(per_page)
-	}
 }

@@ -33,73 +33,6 @@ type Cars struct {
 	Garages *Garages `json:",omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;foreignKey:Garage_id"`
 }
 
-// Store the request data to database
-func (c *Cars) SaveCar(db *gorm.DB) (*Cars, error) {
-	if err := db.Debug().Create(&c).Error; err != nil {
-		return &Cars{}, err
-	}
-	err := c.PopulateCarGarage(db, c.Garage_id)
-	return c, err
-}
-
-// Populate garage data; the foreignkey of a car
-func (c *Cars) PopulateCarGarage(db *gorm.DB, garage_id int) error {
-	err := db.Debug().Model(&Garages{}).Where("id = ?", garage_id).Take(&c.Garages).Error
-	return err
-}
-
-// Find all the available cars from database
-func (c *Cars) GetAllCars(db *gorm.DB, ec echo.Context) (*[]Cars, error) {
-	cars := []Cars{}
-	// With pagination implemented
-	if err := db.Debug().Scopes(Paginate(ec)).Find(&cars).Error; err != nil {
-		return &[]Cars{}, err
-	}
-	for i := range cars {
-		if err := db.Debug().Model(&Garages{}).Where("id = ?", cars[i].Garage_id).Take(&cars[i].Garages).Error; err != nil {
-			return &[]Cars{}, err
-		}
-	}
-	return &cars, nil
-}
-
-// Retreive car object with the primary key (id)
-func (c *Cars) GetCar(db *gorm.DB, car_id int) (*Cars, error) {
-	if err := db.Debug().First(&c, car_id).Error; err != nil {
-		return &Cars{}, err
-	}
-	err := db.Debug().Model(&Garages{}).Where("id = ?", c.Garage_id).Take(&c.Garages).Error
-	return c, err
-}
-
-// Update car data in database
-func (c *Cars) UpdateCar(db *gorm.DB, car_id int, request_body map[string]interface{}) (*Cars, error) {
-	if err := db.Debug().Model(&Cars{}).Where("id = ?", car_id).Updates(request_body).Error; err != nil {
-		return &Cars{}, err
-	}
-	// Get the selected car object to prevent null or missing data
-	// so that the method return complete car data
-	if err := db.Debug().First(&c, car_id).Error; err != nil {
-		return &Cars{}, err
-	}
-	err := c.PopulateCarGarage(db, c.Garage_id)
-	return c, err
-}
-
-// Delete car data from database
-func (c *Cars) DeleteCar(db *gorm.DB, car_id int) (*Cars, error) {
-	var deleted_car Cars
-	if err := db.Debug().First(&deleted_car, car_id).Error; err != nil {
-		return &Cars{}, err
-	}
-	if err := db.Debug().Model(&Garages{}).Where("id = ?", deleted_car.Garage_id).Take(&deleted_car.Garages).Error; err != nil {
-		return &Cars{}, err
-	}
-	db.Debug().Model(&Orders{}).Association("Cars").Delete(Cars{})
-	err := db.Debug().Delete(&c, car_id).Error
-	return &deleted_car, err
-}
-
 // Fix the inconsistent requirement of the car struct/table
 func (c *Cars) FixInconsistentKey(ec echo.Context) (map[string]interface{}, error) {
 	// Create a map to support attributes update
@@ -134,10 +67,4 @@ func (c *Cars) IsACarActive(db *gorm.DB, car_id int) (bool, error) {
 	var result bool
 	err := db.Debug().Model(&Cars{}).Select("is_active").Where("id = ?", car_id).Scan(&result).Error
 	return result, err
-}
-
-// Update the active status of the car of an order
-func (c *Cars) UpdateActiveCar(db *gorm.DB, car_id int, status bool) error {
-	err := db.Debug().Model(&Cars{}).Where("id = ?", car_id).Update("is_active", status).Error
-	return err
 }

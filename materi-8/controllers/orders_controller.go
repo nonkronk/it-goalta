@@ -28,47 +28,46 @@ func CreateOrderController(c echo.Context) error {
 	inactive_cars, err := car.CountActiveCars(config.DB, false)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Check whether selected car status is active
 	car_active, err := car.IsACarActive(config.DB, order.Car_id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Return resource error if all available cars are on active status
 	if inactive_cars == 0 {
 		return c.JSON(http.StatusInternalServerError, models.Response{
 			Message: "Car stock is empty",
-			Error:   "Resource error",
+			Status:  "Resource error",
 		})
 	} else if car_active {
 		return c.JSON(http.StatusInternalServerError, models.Response{
 			Message: "Selected car is not available (booked / active)",
-			Error:   "Resource error",
+			Status:  "Resource error",
 		})
 	}
 	// Store the request order data to the database
 	added_order, err := order.SaveOrder(config.DB)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
-	// Book or update the selected car to be non active on the database
-	err = car.UpdateActiveCar(config.DB, added_order.Car_id, true)
-	if err != nil {
+	// Book or update the selected car to be active on the database
+	if err := config.DB.Debug().Model(&models.Cars{}).Where("id = ?", added_order.Car_id).Update("is_active", true).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Calculate estimated price of an order
 	estimated_price, err := added_order.CalculateEstPrice(config.DB)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Preserve the order of data in JSON and return as specified on the requirement
@@ -89,20 +88,20 @@ func GetAllOrdersController(c echo.Context) error {
 	counted_orders, err := order.CountAllOrders(config.DB)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	if counted_orders == 0 {
 		return c.JSON(http.StatusOK, models.Response{
 			Message: "There's no order data yet in database",
-			Error:   err.Error(),
+			Status:  err.Error(),
 		})
 	}
 	// Load all order data as specified in the requirement
 	meta, composed_orders, err := order.GetComposedAllOrders(config.DB, c)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	return c.JSON(http.StatusOK, models.OrdersResponse{
@@ -118,20 +117,20 @@ func GetAllOrdersControllerV2(c echo.Context) error {
 	counted_orders, err := order.CountAllOrders(config.DB)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	if counted_orders == 0 {
 		return c.JSON(http.StatusOK, models.Response{
 			Message: "There's no order data yet in database",
-			Error:   err.Error(),
+			Status:  err.Error(),
 		})
 	}
 	// Find all the available orders from database
 	orders, err := order.GetAllOrders(config.DB, c)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	return c.JSON(http.StatusOK, models.Response{
@@ -146,7 +145,7 @@ func GetOrderController(c echo.Context) error {
 	order_id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Retreive Order object with the primary key (id)
@@ -154,7 +153,7 @@ func GetOrderController(c echo.Context) error {
 	the_order, err := order.GetOrder(config.DB, order_id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 
@@ -185,7 +184,7 @@ func CloseOrderController(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.Response{
 			Message: `order_id is invalid, use this (e.g. "order-1") instead`,
-			Error:   err.Error(),
+			Status:  err.Error(),
 		})
 	}
 	// Check whether order is on the database
@@ -193,14 +192,14 @@ func CloseOrderController(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
 			Message: "Order id is not found",
-			Error:   err.Error(),
+			Status:  err.Error(),
 		})
 	}
 	// Check whether order id is done already
 	done, err := closed_order.CheckOrderStatus(config.DB, order_id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	if done != "on going" {
@@ -212,21 +211,20 @@ func CloseOrderController(c echo.Context) error {
 	err = closed_order.UpdateTotalDays(config.DB, order_id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Update the active status of the car of the order to be closed on the database
-	err = closed_order.Cars.UpdateActiveCar(config.DB, closed_order.Cars.ID, false)
-	if err != nil {
+	if err := config.DB.Debug().Model(&models.Cars{}).Where("id = ?", closed_order.Car_id).Update("is_active", false).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Update the late status of the order
 	err = closed_order.UpdateLateStatus(config.DB, order_id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{
-			Error: err.Error(),
+			Status: err.Error(),
 		})
 	}
 	// Preserve the order of data in JSON
